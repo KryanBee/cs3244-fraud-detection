@@ -1,0 +1,17 @@
+model: logreg
+
+data:
+  x_train: data/input/X_train.csv
+  y_train: data/input/y_train.csv
+  x_test: data/input/X_test.csv
+  y_test: data/input/y_test.csv
+
+search:
+  type: grid
+  cv: 5
+  scoring: average_precision
+
+params:
+  C: [1.0]
+  penalty: ["l2"]
+  max_iter: [1000]
