@@ -22,3 +22,4 @@ data/sample_submission/*.csv
 
 # Experiment results
 results/*
+!results/.gitkeep
