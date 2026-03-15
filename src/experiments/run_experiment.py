@@ -106,7 +106,7 @@ if __name__ == "__main__":
 
     run(args.config, args.name)
 
-# python -m src.experiments.run_experiment --config configs/logreg.yaml --name logreg_baseline
-# python -m src.experiments.run_experiment --config configs/knn.yaml --name knn_baseline
-# python -m src.experiments.run_experiment --config configs/dt.yaml --name dt_baseline
-# python -m src.experiments.run_experiment --config configs/svm.yaml --name svm_baseline
+# python -m src.experiments.run_experiment --config configs/logreg.yaml --name logreg_
+# python -m src.experiments.run_experiment --config configs/knn.yaml --name knn_
+# python -m src.experiments.run_experiment --config configs/dt.yaml --name dt_
+# python -m src.experiments.run_experiment --config configs/svm.yaml --name svm_
