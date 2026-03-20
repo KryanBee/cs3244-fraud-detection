@@ -8,10 +8,13 @@ data:
 
 search:
   type: grid
-  cv: 5
+  cv: 3  # Reduced from 5 to 3 to speed up tuning significantly
   scoring: average_precision
 
 params:
-  n_neighbors: [5]
-  weights: ["uniform"]
+  # Using 'minkowski' with p=1 is Manhattan, p=2 is Euclidean. 
+  # This avoids running the same test twice.
+  n_neighbors: [3, 5, 11, 21, 31] 
+  weights: ["uniform", "distance"]
   metric: ["minkowski"]
+  p: [1, 2]

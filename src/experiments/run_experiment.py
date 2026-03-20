@@ -45,12 +45,14 @@ def run(config_path, name):
         raise ValueError("Unknown model type")
 
     # Hyperparameter tuning via grid search with cross-validation
+    # Hyperparameter tuning via grid search with cross-validation
     grid = GridSearchCV(
         model.model,
         param_grid=cfg["params"],
         cv=cfg["search"]["cv"],
         scoring=cfg["search"]["scoring"],
-        n_jobs=1,
+        n_jobs=-1,   # Change to -1 to use ALL your CPU cores
+        verbose=3,   # Change to 3 so you see progress in the terminal
         return_train_score=True
     )
     grid.fit(X_train, y_train)
