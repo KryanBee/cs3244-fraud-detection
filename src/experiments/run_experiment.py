@@ -2,8 +2,15 @@ import argparse
 import pandas as pd
 import joblib
 import numpy as np
+import sys
+from pathlib import Path
+
+# Add project root to Python path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
 
 from sklearn.model_selection import GridSearchCV
+from imblearn.over_sampling import SMOTE
 
 from src.utils.config import load_config
 from src.models.logreg_model import LogRegModel
@@ -31,6 +38,10 @@ def run(config_path, name):
     cfg = load_config(config_path)
     exp_dir = create_experiment_dir(name)
     X_train, y_train, X_test, y_test = load_data(cfg)
+
+    # Apply SMOTE to training data to handle class imbalance
+    smote = SMOTE(random_state=42)
+    X_train, y_train = smote.fit_resample(X_train, y_train)
 
     # Instantiate model based on config
     if cfg["model"] == "logreg":
