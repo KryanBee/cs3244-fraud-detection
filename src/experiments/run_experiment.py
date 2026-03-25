@@ -2,8 +2,16 @@ import argparse
 import pandas as pd
 import joblib
 import numpy as np
+import sys
+from pathlib import Path
+
+# Add project root to Python path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
 
 from sklearn.model_selection import GridSearchCV
+from imblearn.over_sampling import BorderlineSMOTE
+from imblearn.pipeline import Pipeline
 
 from src.utils.config import load_config
 from src.models.logreg_model import LogRegModel
@@ -44,11 +52,20 @@ def run(config_path, name):
     else:
         raise ValueError("Unknown model type")
 
+    # Create pipeline with BorderlineSMOTE + model to handle class imbalance within CV
+    pipeline = Pipeline([
+        ('smote', BorderlineSMOTE(random_state=42)),
+        ('classifier', model.model)
+    ])
+
+    # Prefix parameter names with 'classifier__' to work with the pipeline
+    param_grid = {f"classifier__{k}": v for k, v in cfg["params"].items()}
+
     # Hyperparameter tuning via grid search with cross-validation
-    # Hyperparameter tuning via grid search with cross-validation
+    # BorderlineSMOTE is applied within each fold to avoid data leakage
     grid = GridSearchCV(
-        model.model,
-        param_grid=cfg["params"],
+        pipeline,
+        param_grid=param_grid,
         cv=cfg["search"]["cv"],
         scoring=cfg["search"]["scoring"],
         n_jobs=-1,   # Change to -1 to use ALL your CPU cores
