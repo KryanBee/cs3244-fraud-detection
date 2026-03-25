@@ -5,13 +5,15 @@ import numpy as np
 import sys
 from pathlib import Path
 
+from sklearn.model_selection import GridSearchCV, cross_val_predict, StratifiedKFold
+from sklearn.base import clone
+
+from imblearn.over_sampling import BorderlineSMOTE
+from imblearn.pipeline import Pipeline
+
 # Add project root to Python path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
-
-from sklearn.model_selection import GridSearchCV
-from imblearn.over_sampling import BorderlineSMOTE
-from imblearn.pipeline import Pipeline
 
 from src.utils.config import load_config
 from src.models.logreg_model import LogRegModel
@@ -40,6 +42,13 @@ def run(config_path, name):
     exp_dir = create_experiment_dir(name)
     X_train, y_train, X_test, y_test = load_data(cfg)
 
+    # Use explicit StratifiedKFold to preserve class imbalance (~5%) in every fold
+    cv = StratifiedKFold(
+        n_splits=cfg["search"]["cv"],
+        shuffle=True,
+        random_state=42
+    )
+
     # Instantiate model based on config
     if cfg["model"] == "logreg":
         model = LogRegModel()
@@ -52,41 +61,69 @@ def run(config_path, name):
     else:
         raise ValueError("Unknown model type")
 
-    # Create pipeline with BorderlineSMOTE + model to handle class imbalance within CV
+    # Pipeline: SMOTE + classifier
+    # SMOTE is applied ONLY during training folds inside CV (no leakage into validation/test)
     pipeline = Pipeline([
         ('smote', BorderlineSMOTE(random_state=42)),
         ('classifier', model.model)
     ])
 
-    # Prefix parameter names with 'classifier__' to work with the pipeline
+    # Prefix parameter names for pipeline compatibility
     param_grid = {f"classifier__{k}": v for k, v in cfg["params"].items()}
 
-    # Hyperparameter tuning via grid search with cross-validation
-    # BorderlineSMOTE is applied within each fold to avoid data leakage
+    # Grid search with cross-validation
+    # - SMOTE applied inside each training fold
+    # - validation folds remain untouched (~5% fraud)
+    # - PR-AUC used as threshold-independent metric
     grid = GridSearchCV(
         pipeline,
         param_grid=param_grid,
-        cv=cfg["search"]["cv"],
+        cv=cv,
         scoring=cfg["search"]["scoring"],
-        n_jobs=-1,   # Change to -1 to use ALL your CPU cores
-        verbose=3,   # Change to 3 so you see progress in the terminal
+        n_jobs=-1,
+        verbose=3,
         return_train_score=True
     )
+
     grid.fit(X_train, y_train)
 
-    # Get best model performance
+    # Extract best model and CV performance
     best_index = grid.best_index_
     cv_mean = grid.cv_results_["mean_test_score"][best_index]
     cv_std = grid.cv_results_["std_test_score"][best_index]
     best_model = grid.best_estimator_
 
-    # Find optimal threshold on training data, then evaluate on test
-    train_probs = best_model.predict_proba(X_train)[:, 1]
-    best_threshold = find_best_threshold(y_train, train_probs)
+    # Threshold Selection (IMPORTANT)
+    # We compute OUT-OF-FOLD (OOF) predictions:
+    # - each prediction is made on unseen validation data
+    # - validation folds are NOT SMOTEd (retain ~5% class distribution)
+    # - avoids bias from:
+    #     (1) training on same data
+    #     (2) SMOTE-inflated probabilities
+    # This produces realistic probabilities for threshold tuning.
+
+    best_pipeline = clone(pipeline)
+    best_pipeline.set_params(**grid.best_params_)
+
+    oof_probs = cross_val_predict(
+        best_pipeline,
+        X_train,
+        y_train,
+        cv=cv,
+        method="predict_proba",
+        n_jobs=-1
+    )[:, 1]
+
+    best_threshold = find_best_threshold(y_train, oof_probs)
+
+    # Final Evaluation
+    # best_model is already refit on FULL training data using SMOTE
+    # test set remains untouched (real-world distribution)
+
     test_probs = best_model.predict_proba(X_test)[:, 1]
     results = compute_metrics(y_test, test_probs, best_threshold)
 
-    # Include CV stats in results
+    # Include CV stats
     results["cv_mean_pr_auc"] = cv_mean
     results["cv_std_pr_auc"] = cv_std
     results["best_params"] = grid.best_params_
@@ -101,11 +138,14 @@ def run(config_path, name):
     # Display results
     print("\nBest Hyperparameters:")
     print(grid.best_params_)
+
     print("\nCross-Validation PR-AUC:")
     print(f"Mean: {cv_mean:.4f}")
     print(f"Std : {cv_std:.4f}")
-    print("\nBest Threshold:")
+
+    print("\nBest Threshold (from OOF predictions):")
     print(f"{best_threshold:.4f}")
+
     print("\nTest Set Results:")
     for k, v in results.items():
         if isinstance(v, float):
@@ -117,7 +157,6 @@ def run(config_path, name):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-
     parser.add_argument("--config", type=str, required=True)
     parser.add_argument("--name", type=str, default="experiment")
 

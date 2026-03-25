@@ -33,7 +33,7 @@ Run the scripts below to aggregate invoices and generate the modelling dataset.
 
 ```
 python src/data/aggregate_invoices.py
-python src/data/preprocess.py
+python src/data/preprocess.py --drop_low_importance
 ```
 
 These scripts will prepare the feature dataset and create the training/testing splits used for experiments.

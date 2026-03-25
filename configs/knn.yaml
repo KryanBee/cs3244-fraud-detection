@@ -14,7 +14,7 @@ search:
 params:
   # Using 'minkowski' with p=1 is Manhattan, p=2 is Euclidean. 
   # This avoids running the same test twice.
-  n_neighbors: [3, 5, 11, 21, 31] 
-  weights: ["uniform", "distance"]
+  n_neighbors: [51] 
+  weights: ["distance"]
   metric: ["minkowski"]
-  p: [1, 2]
+  p: [1]
