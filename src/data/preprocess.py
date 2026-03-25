@@ -13,6 +13,7 @@ def preprocess(
     test_size: float = 0.2,
     seed: int = 3244,
     drop_cols: list = None,
+    drop_low_importance: bool = False,
 ):
     """
     Preprocesses aggregated features for model training.
@@ -20,10 +21,11 @@ def preprocess(
     Steps:
     1. Load aggregated client features
     2. Remove irrelevant columns (ID fields)
-    3. One-hot encode categorical variables
-    4. Stratified train-test split (preserves class distribution)
-    5. Standardize features using training set statistics
-    6. Save processed splits to CSV
+    3. (Optional) Remove low-importance columns based on MI analysis
+    4. One-hot encode categorical variables
+    5. Stratified train-test split (preserves class distribution)
+    6. Standardize features using training set statistics
+    7. Save processed splits to CSV
 
     The standardization is fit exclusively on training data to avoid
     test-set leakage when scaling is applied to both splits.
@@ -34,8 +36,22 @@ def preprocess(
 
     df = pd.read_csv(input_path)
 
+    # Low importance features based on Mutual Information (MI < 0.001)
+    low_importance_cols = [
+        "consommation_level_2_min",
+        "consommation_level_3_min",
+        "consommation_level_4_min",
+        "client_catg",
+        "disrict"
+    ]
+
     # Drop non-predictive columns
     df = df.drop(columns=[c for c in drop_cols if c in df.columns])
+
+    # Optionally drop low-importance columns
+    if drop_low_importance:
+        print(f"Dropping low-importance features: {low_importance_cols}")
+        df = df.drop(columns=[c for c in low_importance_cols if c in df.columns])
 
     # Separate labels and features
     y = df[label_col].astype(int)
@@ -123,6 +139,12 @@ if __name__ == "__main__":
         default=["client_id", "creation_date"],
     )
 
+    parser.add_argument(
+        "--drop_low_importance",
+        action="store_true",
+        help="Drop features with low Mutual Information scores",
+    )
+
     args = parser.parse_args()
 
     preprocess(
@@ -132,6 +154,7 @@ if __name__ == "__main__":
         args.test_size,
         args.seed,
         args.drop_cols,
+        args.drop_low_importance,
     )
 
 # python src/data/preprocess.py
