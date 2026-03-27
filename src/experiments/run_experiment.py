@@ -37,7 +37,7 @@ def load_data(cfg):
     return X_train, y_train, X_test, y_test
 
 
-def run(config_path, name):
+def run(config_path, name, smote=False):  # default = NO SMOTE
     cfg = load_config(config_path)
     exp_dir = create_experiment_dir(name)
     X_train, y_train, X_test, y_test = load_data(cfg)
@@ -61,20 +61,24 @@ def run(config_path, name):
     else:
         raise ValueError("Unknown model type")
 
-    # Pipeline: SMOTE + classifier
-    # SMOTE is applied ONLY during training folds inside CV (no leakage into validation/test)
-    pipeline = Pipeline([
-        ('smote', BorderlineSMOTE(random_state=42)),
-        ('classifier', model.model)
-    ])
+    # Pipeline: optional SMOTE + classifier
+    # - Default: NO SMOTE (baseline setting)
+    # - If enabled: SMOTE is applied ONLY to training folds (no leakage)
+    # - Validation/test data always remain untouched (~5% fraud rate)
+    if smote:
+        pipeline = Pipeline([
+            ('smote', BorderlineSMOTE(random_state=42)),
+            ('classifier', model.model)
+        ])
+    else:
+        pipeline = Pipeline([
+            ('classifier', model.model)
+        ])
 
     # Prefix parameter names for pipeline compatibility
     param_grid = {f"classifier__{k}": v for k, v in cfg["params"].items()}
 
     # Grid search with cross-validation
-    # - SMOTE applied inside each training fold
-    # - validation folds remain untouched (~5% fraud)
-    # - PR-AUC used as threshold-independent metric
     grid = GridSearchCV(
         pipeline,
         param_grid=param_grid,
@@ -93,15 +97,9 @@ def run(config_path, name):
     cv_std = grid.cv_results_["std_test_score"][best_index]
     best_model = grid.best_estimator_
 
-    # Threshold Selection (IMPORTANT)
-    # We compute OUT-OF-FOLD (OOF) predictions:
-    # - each prediction is made on unseen validation data
-    # - validation folds are NOT SMOTEd (retain ~5% class distribution)
-    # - avoids bias from:
-    #     (1) training on same data
-    #     (2) SMOTE-inflated probabilities
-    # This produces realistic probabilities for threshold tuning.
-
+    # Threshold Selection using Out-of-Fold (OOF) predictions
+    # - Predictions are made on unseen validation folds
+    # - If SMOTE is enabled: applied only to training folds
     best_pipeline = clone(pipeline)
     best_pipeline.set_params(**grid.best_params_)
 
@@ -117,9 +115,8 @@ def run(config_path, name):
     best_threshold = find_best_threshold(y_train, oof_probs)
 
     # Final Evaluation
-    # best_model is already refit on FULL training data using SMOTE
+    # best_model is refit on FULL training data (with or without SMOTE)
     # test set remains untouched (real-world distribution)
-
     test_probs = best_model.predict_proba(X_test)[:, 1]
     results = compute_metrics(y_test, test_probs, best_threshold)
 
@@ -127,6 +124,7 @@ def run(config_path, name):
     results["cv_mean_pr_auc"] = cv_mean
     results["cv_std_pr_auc"] = cv_std
     results["best_params"] = grid.best_params_
+    results["used_smote"] = smote  # track experiment setting
 
     # Save outputs
     save_metrics(results, exp_dir)
@@ -159,12 +157,27 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", type=str, required=True)
     parser.add_argument("--name", type=str, default="experiment")
+    parser.add_argument(
+        "--smote",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Enable SMOTE (default: False)"
+    )
 
     args = parser.parse_args()
 
-    run(args.config, args.name)
+    run(args.config, args.name, smote=args.smote)
 
-# python -m src.experiments.run_experiment --config configs/logreg.yaml --name logreg_
-# python -m src.experiments.run_experiment --config configs/knn.yaml --name knn_
-# python -m src.experiments.run_experiment --config configs/dt.yaml --name dt_
-# python -m src.experiments.run_experiment --config configs/svm.yaml --name svm_
+
+# EXAMPLE USAGE
+# --- Default (NO SMOTE, baseline setting) ---
+# python -m src.experiments.run_experiment --config configs/logreg.yaml --name logreg_baseline
+# python -m src.experiments.run_experiment --config configs/knn.yaml --name knn_baseline
+# python -m src.experiments.run_experiment --config configs/dt.yaml --name dt_baseline
+# python -m src.experiments.run_experiment --config configs/svm.yaml --name svm_baseline
+
+# --- Enable SMOTE ---
+# python -m src.experiments.run_experiment --config configs/logreg.yaml --name logreg_smote --smote
+# python -m src.experiments.run_experiment --config configs/knn.yaml --name knn_smote --smote
+# python -m src.experiments.run_experiment --config configs/dt.yaml --name dt_smote --smote
+# python -m src.experiments.run_experiment --config configs/svm.yaml --name svm_smote --smote
