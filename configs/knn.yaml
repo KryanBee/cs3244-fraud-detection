@@ -12,9 +12,8 @@ search:
   scoring: average_precision
 
 params:
-  # Using 'minkowski' with p=1 is Manhattan, p=2 is Euclidean. 
-  # This avoids running the same test twice.
-  n_neighbors: [3, 5, 11, 21, 31] 
-  weights: ["uniform", "distance"]
+  # Exploring higher K values since 31 was the previous best
+  n_neighbors: [31, 41, 51, 61, 81, 101]
+  weights: ["distance"] # "distance" outperformed "uniform" in your last run
   metric: ["minkowski"]
-  p: [1, 2]
+  p: [1] # Manhattan distance (p=1) was previously preferred
