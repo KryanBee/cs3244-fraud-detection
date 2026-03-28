@@ -11,7 +11,7 @@ search:
   cv: 3  # Reduced from 5 to 3 to speed up tuning significantly
   scoring: average_precision
 
-params:giy
+params:
   # Exploring higher K values since 31 was the previous best
   n_neighbors: [31, 41, 51, 61, 81, 101]
   weights: ["distance"] # "distance" outperformed "uniform" in your last run
