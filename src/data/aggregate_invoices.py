@@ -51,6 +51,13 @@ def aggregate_invoices(invoice_path, client_path):
         + invoices["consommation_level_4"]
     )
 
+    # Domain Expertise: Normalized monthly consumption
+    invoices["months_number"] = invoices["months_number"].replace(0, 1)
+    invoices["monthly_consumption"] = invoices["total_consumption"] / invoices["months_number"]
+
+    # Domain Expertise: Zero consumption flag
+    invoices["is_zero_consumption"] = (invoices["total_consumption"] == 0).astype(int)
+
     invoices["delta_index"] = invoices["new_index"] - invoices["old_index"]
 
     invoices = invoices.sort_values(["client_id", "invoice_date"])
@@ -78,12 +85,14 @@ def aggregate_invoices(invoice_path, client_path):
         "consommation_level_3",
         "consommation_level_4",
         "total_consumption",
+        "monthly_consumption",
         "delta_index",
         "delta_time",
         "consumption_change",
         "reading_remarque",
         "counter_coefficient",
-        "months_number"
+        "months_number",
+        "is_zero_consumption"
     ]
 
     agg_funcs = {

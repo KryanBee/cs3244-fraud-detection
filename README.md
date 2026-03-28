@@ -4,7 +4,7 @@
 
 Create and activate a virtual environment before installing dependencies.
 
-```
+```bash
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -19,7 +19,7 @@ Place the following files in the specified directories:
 * `client_*.csv` and `invoice_*.csv` → `data/raw/`
 * `SamplesSubmission (2).csv` → `sample_submission/`
 
-Note:
+### Notes
 
 * The provided **test dataset is unlabeled**.
 * It will go through the processing pipeline but **is not used for model training**.
@@ -31,30 +31,90 @@ Note:
 
 Run the scripts below to aggregate invoices and generate the modelling dataset.
 
-```
+### Option A — Full Feature Set (Default)
+
+```bash
 python src/data/aggregate_invoices.py
 python src/data/preprocess.py
 ```
 
-These scripts will prepare the feature dataset and create the training/testing splits used for experiments.
+* Uses the **complete set of engineered features**
+* Recommended as a **baseline feature configuration**
 
----
+
+### Option B — Reduced Feature Set (Drop Low-Importance Features)
+
+```bash
+python src/data/aggregate_invoices.py
+python src/data/preprocess.py --drop_low_importance
+```
+
+* Removes features identified as **low importance**
+
+
 
 ## 4. Run Experiments
 
 All models are trained through the experiment runner.
 
-```
-python -m src.experiments.run_experiment --config configs/<model>.yaml --name <experiment_name>
+### Default (No SMOTE)
+
+```bash
+python -m src.experiments.run_experiment \
+  --config configs/<model>.yaml \
+  --name <experiment_name>
 ```
 
 Example:
 
-```
-python -m src.experiments.run_experiment --config configs/knn.yaml --name knn_baseline
+```bash
+python -m src.experiments.run_experiment \
+  --config configs/knn.yaml \
+  --name knn_baseline
 ```
 
+### Enable SMOTE
+
+To apply SMOTE during training, use the `--smote` flag:
+
+```bash
+python -m src.experiments.run_experiment \
+  --config configs/<model>.yaml \
+  --name <experiment_name> \
+  --smote
+```
+
+Example:
+
+```bash
+python -m src.experiments.run_experiment \
+  --config configs/logreg.yaml \
+  --name logreg_smote \
+  --smote
+```
+
+## Notes on Imbalanced Learning
+
+* **SMOTE is disabled by default** to provide a clean baseline
+* When enabled, SMOTE is applied **only to training folds** (no data leakage)
+* Validation and test sets always retain the **original class distribution**
+
+Additionally:
+
+* Logistic Regression, SVM, and Decision Tree support `class_weight` (configured in YAML)
+* KNN does **not** support class weighting → relies on SMOTE for imbalance handling
+
+
+## Results
+
 Results will be saved automatically in the `results/` directory.
+
+Each experiment includes:
+
+* Evaluation metrics
+* Best hyperparameters
+* ROC and PR curves
+* Trained model artifact
 
 ---
 
