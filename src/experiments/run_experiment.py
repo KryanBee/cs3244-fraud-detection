@@ -20,6 +20,9 @@ from src.models.logreg_model import LogRegModel
 from src.models.knn_model import KNNModel
 from src.models.dt_model import DecisionTreeModel
 from src.models.svm_model import SVMModel
+from src.models.adaboost_model import AdaBoostModel
+from src.models.histboost_model import HistBoostModel
+from src.models.xgboost_model import XGBoostModel
 
 from src.evaluation.metrics import compute_metrics, find_best_threshold
 from src.evaluation.plots import plot_roc, plot_pr
@@ -49,7 +52,6 @@ def run(config_path, name, smote=False):  # default = NO SMOTE
         random_state=42
     )
 
-    # Instantiate model based on config
     if cfg["model"] == "logreg":
         model = LogRegModel()
     elif cfg["model"] == "knn":
@@ -58,6 +60,12 @@ def run(config_path, name, smote=False):  # default = NO SMOTE
         model = DecisionTreeModel()
     elif cfg["model"] == "svm":
         model = SVMModel()
+    elif cfg["model"] == "adaboost":
+        model = AdaBoostModel()
+    elif cfg["model"] == "histboost":
+        model = HistBoostModel()
+    elif cfg["model"] == "xgboost":
+        model = XGBoostModel()
     else:
         raise ValueError("Unknown model type")
 
@@ -175,6 +183,10 @@ if __name__ == "__main__":
 # python -m src.experiments.run_experiment --config configs/knn.yaml --name knn_baseline
 # python -m src.experiments.run_experiment --config configs/dt.yaml --name dt_baseline
 # python -m src.experiments.run_experiment --config configs/svm.yaml --name svm_baseline
+# python -m src.experiments.run_experiment --config configs/histboost.yaml --name histboost_baseline
+# python -m src.experiments.run_experiment --config configs/adaboost.yaml --name adaboost_baseline
+# python -m src.experiments.run_experiment --config configs/xgboost.yaml --name xgboost_baseline
+
 
 # --- Enable SMOTE ---
 # python -m src.experiments.run_experiment --config configs/logreg.yaml --name logreg_smote --smote

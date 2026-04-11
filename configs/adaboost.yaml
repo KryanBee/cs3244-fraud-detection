@@ -1,0 +1,18 @@
+model: adaboost
+
+data:
+  x_train: data/input/X_train.csv
+  y_train: data/input/y_train.csv
+  x_test: data/input/X_test.csv
+  y_test: data/input/y_test.csv
+
+search:
+  type: grid
+  cv: 5
+  scoring: average_precision
+
+params:
+  n_estimators: [100, 200]
+  learning_rate: [0.05, 0.1]
+  estimator__max_depth: [1, 2]
+  estimator__min_samples_leaf: [10, 50]

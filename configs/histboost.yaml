@@ -1,0 +1,21 @@
+model: histboost
+
+data:
+  x_train: data/input/X_train.csv
+  y_train: data/input/y_train.csv
+  x_test: data/input/X_test.csv
+  y_test: data/input/y_test.csv
+
+search:
+  type: grid
+  cv: 5
+  scoring: average_precision
+
+params:
+  learning_rate: [0.05, 0.1]
+  max_depth: [None, 5]
+  max_iter: [200]
+  min_samples_leaf: [20, 50]
+  l2_regularization: [0.0, 1.0]
+  max_features: [0.8, 1.0]
+  class_weight: ["balanced"]
