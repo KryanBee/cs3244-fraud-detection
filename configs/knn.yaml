@@ -12,9 +12,15 @@ search:
   scoring: average_precision
 
 params:
-  # Exploring higher K values since 31 was the previous best
-  n_neighbors: [31, 41, 51, 61, 81, 101]
-  weights: ["distance"] # "distance" outperformed "uniform" in your last run
+  # Starting at your Option B baseline and scaling up for the SMOTE density
+  n_neighbors: [51, 101, 151, 201, 251]
+  
+  # Distance weights are usually better for fraud, but uniform is worth
+  # testing as it can be more robust against synthetic noise from SMOTE
+  weights: ["uniform", "distance"]
+  
   metric: ["minkowski"]
-  p: [1] # Manhattan distance (p=1) was previously preferred
-
+  
+  # Manhattan distance (p=1) has consistently outperformed Euclidean (p=2)
+  # in all your previous experiments
+  p: [1, 2]
