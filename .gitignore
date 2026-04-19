@@ -23,6 +23,8 @@ data/sample_submission/*.csv
 # Experiment results
 results/*
 !results/.gitkeep
+!results/*_final/
+!results/*_final/**
 
 # Development Notebooks
 dev.ipynb

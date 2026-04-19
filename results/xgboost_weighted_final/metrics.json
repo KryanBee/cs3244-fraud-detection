@@ -1,0 +1,24 @@
+{
+    "roc_auc": 0.8736844711579868,
+    "pr_auc": 0.35618306807299926,
+    "f1": 0.4099585062240664,
+    "precision": 0.3525214081826832,
+    "recall": 0.4897554527428949,
+    "tp": 741,
+    "tn": 24225,
+    "fp": 1361,
+    "fn": 772,
+    "threshold": 0.72,
+    "cv_mean_pr_auc": 0.3471536034704183,
+    "cv_std_pr_auc": 0.01069861445699423,
+    "best_params": {
+        "classifier__colsample_bytree": 0.8,
+        "classifier__learning_rate": 0.05,
+        "classifier__max_depth": 6,
+        "classifier__min_child_weight": 5,
+        "classifier__n_estimators": 400,
+        "classifier__reg_lambda": 10,
+        "classifier__scale_pos_weight": 16.907483892284816
+    },
+    "used_smote": false
+}
